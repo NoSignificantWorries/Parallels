@@ -97,12 +97,14 @@ double integration_parallel(myfunc *func, double a, double b, int NumThreads)
         int current_thread_number = omp_get_thread_num();
         int threads_count = omp_get_num_threads();
 
+        double local_sum = 0.0;
         for (int i = current_thread_number; i < NSTEPS; i += threads_count)
         {
             double x = a + (i + 0.5) * step;
-            #pragma omp atomic
-            sum += func(x) * step;
+            local_sum += func(x) * step;
         }
+        #pragma omp atomic
+        sum += local_sum;
     }
 
     return sum;
