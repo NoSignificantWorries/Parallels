@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/d.karpachev/cpp_projects/build",
+  "command": "g++  -fopenmp -O2 -g -o CMakeFiles/integration.dir/integration.cpp.o -c /home/d.karpachev/cpp_projects/task2/integration.cpp",
+  "file": "/home/d.karpachev/cpp_projects/task2/integration.cpp"
+},
+{
+  "directory": "/home/d.karpachev/cpp_projects/build",
+  "command": "g++  -fopenmp -O2 -g -o CMakeFiles/matrix.dir/matrix.cpp.o -c /home/d.karpachev/cpp_projects/task2/matrix.cpp",
+  "file": "/home/d.karpachev/cpp_projects/task2/matrix.cpp"
+}
+]

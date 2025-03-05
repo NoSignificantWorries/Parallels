@@ -1,0 +1,76 @@
+{
+	"kind" : "toolchains",
+	"toolchains" : 
+	[
+		{
+			"compiler" : 
+			{
+				"id" : "GNU",
+				"implicit" : 
+				{
+					"includeDirectories" : 
+					[
+						"/usr/local/pmix/include",
+						"/usr/local/knem/include",
+						"/usr/local/gdrcopy/include",
+						"/opt/nvidia/hpc_sdk/Linux_x86_64/23.11/compilers/extras/qd/include/qd",
+						"/opt/nvidia/hpc_sdk/Linux_x86_64/23.11/comm_libs/nvshmem/include",
+						"/opt/nvidia/hpc_sdk/Linux_x86_64/23.11/comm_libs/nccl/include",
+						"/opt/nvidia/hpc_sdk/Linux_x86_64/23.11/math_libs/include",
+						"/usr/include/c++/13",
+						"/usr/include/x86_64-linux-gnu/c++/13",
+						"/usr/include/c++/13/backward",
+						"/usr/lib/gcc/x86_64-linux-gnu/13/include",
+						"/usr/local/include",
+						"/usr/include/x86_64-linux-gnu",
+						"/usr/include"
+					],
+					"linkDirectories" : 
+					[
+						"/usr/local/gdrcopy/lib",
+						"/usr/lib/gcc/x86_64-linux-gnu/13",
+						"/usr/lib/x86_64-linux-gnu",
+						"/usr/lib",
+						"/lib/x86_64-linux-gnu",
+						"/lib",
+						"/usr/local/gdrcopy/lib64"
+					],
+					"linkFrameworkDirectories" : [],
+					"linkLibraries" : 
+					[
+						"stdc++",
+						"m",
+						"gcc_s",
+						"gcc",
+						"c",
+						"gcc_s",
+						"gcc"
+					]
+				},
+				"path" : "g++",
+				"version" : "13.1.0"
+			},
+			"language" : "CXX",
+			"sourceFileExtensions" : 
+			[
+				"C",
+				"M",
+				"c++",
+				"cc",
+				"cpp",
+				"cxx",
+				"m",
+				"mm",
+				"mpp",
+				"CPP",
+				"ixx",
+				"cppm"
+			]
+		}
+	],
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 0
+	}
+}
