@@ -16,7 +16,8 @@
 					"targetIndexes" : 
 					[
 						0,
-						1
+						1,
+						2
 					]
 				}
 			],
@@ -32,7 +33,8 @@
 					"targetIndexes" : 
 					[
 						0,
-						1
+						1,
+						2
 					]
 				}
 			],
@@ -50,6 +52,13 @@
 					"id" : "matrix::@6890427a1f51a3e7e1df",
 					"jsonFile" : "target-matrix-Debug-d40b5b73754f5e6af1df.json",
 					"name" : "matrix",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "sole_for::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-sole_for-Debug-cd2d6191352af0f7c8dc.json",
+					"name" : "sole_for",
 					"projectIndex" : 0
 				}
 			]

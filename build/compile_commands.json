@@ -8,5 +8,10 @@
   "directory": "/home/d.karpachev/cpp_projects/build",
   "command": "g++  -fopenmp -O2 -g -o CMakeFiles/matrix.dir/matrix.cpp.o -c /home/d.karpachev/cpp_projects/task2/matrix.cpp",
   "file": "/home/d.karpachev/cpp_projects/task2/matrix.cpp"
+},
+{
+  "directory": "/home/d.karpachev/cpp_projects/build",
+  "command": "g++  -fopenmp -O2 -g -o CMakeFiles/sole_for.dir/sole_for.cpp.o -c /home/d.karpachev/cpp_projects/task2/sole_for.cpp",
+  "file": "/home/d.karpachev/cpp_projects/task2/sole_for.cpp"
 }
 ]

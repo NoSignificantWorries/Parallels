@@ -102,6 +102,37 @@ build bin/matrix: CXX_EXECUTABLE_LINKER__matrix_Debug CMakeFiles/matrix.dir/matr
   TARGET_FILE = bin/matrix
   TARGET_PDB = matrix.dbg
 
+# =============================================================================
+# Object build statements for EXECUTABLE target sole_for
+
+
+#############################################
+# Order-only phony target for sole_for
+
+build cmake_object_order_depends_target_sole_for: phony || CMakeFiles/sole_for.dir
+
+build CMakeFiles/sole_for.dir/sole_for.cpp.o: CXX_COMPILER__sole_for_Debug /home/d.karpachev/cpp_projects/task2/sole_for.cpp || cmake_object_order_depends_target_sole_for
+  DEP_FILE = CMakeFiles/sole_for.dir/sole_for.cpp.o.d
+  FLAGS = -fopenmp -O2 -g
+  OBJECT_DIR = CMakeFiles/sole_for.dir
+  OBJECT_FILE_DIR = CMakeFiles/sole_for.dir
+
+
+# =============================================================================
+# Link build statements for EXECUTABLE target sole_for
+
+
+#############################################
+# Link the executable bin/sole_for
+
+build bin/sole_for: CXX_EXECUTABLE_LINKER__sole_for_Debug CMakeFiles/sole_for.dir/sole_for.cpp.o
+  FLAGS = -fopenmp -O2 -g
+  OBJECT_DIR = CMakeFiles/sole_for.dir
+  POST_BUILD = :
+  PRE_LINK = :
+  TARGET_FILE = bin/sole_for
+  TARGET_PDB = sole_for.dbg
+
 
 #############################################
 # Utility command for edit_cache
@@ -132,6 +163,8 @@ build integration: phony bin/integration
 
 build matrix: phony bin/matrix
 
+build sole_for: phony bin/sole_for
+
 # =============================================================================
 # Folder targets.
 
@@ -140,7 +173,7 @@ build matrix: phony bin/matrix
 #############################################
 # Folder: /home/d.karpachev/cpp_projects/build
 
-build all: phony bin/integration bin/matrix
+build all: phony bin/integration bin/matrix bin/sole_for
 
 # =============================================================================
 # Built-in targets
