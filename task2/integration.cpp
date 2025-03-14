@@ -1,78 +1,80 @@
 #include <iostream>
-#include <omp.h>
-#include <vector>
-#include <chrono>
 #include <fstream>
+#include <chrono>
 #include <cmath>
+#include <vector>
+#include <omp.h>
 
 #define NSTEPS 40000000
 
-typedef double myfunc(double);
+using int_vec = std::vector<int>;
+typedef double (*func)(double);
 
-void run_test(myfunc *func, double a, double b, std::ofstream &out);
+double run_test(double (*integration)(func, int, int, int), func f, int a, int b, int NumThreads);
 
-int run_serial(myfunc *func, double a, double b);
-std::vector<int> run_parallel(myfunc *func, double a, double b);
+double integration_serial(func f, int a, int b, int _);
+double integration_parallel(func f, int a, int b, int NumThreads);
 
-double integration_serial(myfunc *func, double a, double b);
-double integration_parallel(myfunc *func, double a, double b, int NumThreads);
+int main()
+{
+    std::ofstream outputFile("data/integration_result.txt");
 
-int main() {
-    std::ofstream outputFile("result_integration.txt");
-    
-    run_test(std::sin, 0, 1000, outputFile);
-    run_test(std::exp, 0, 1000, outputFile);
-    run_test(std::sqrt, 0, 1000, outputFile);
-    
+    int_vec threads_list{1, 2, 4, 7, 8, 16, 20, 40};
+
+    for (int threads : threads_list)
+    {
+        outputFile << threads << " ";
+    }
+    outputFile << "\n";
+
+    std::vector<std::pair<std::string, func>> functions{{"Exp", std::exp}, {"Sin", std::sin}, {"Cos", std::cos}};
+
+    for (std::pair<std::string, func> elem : functions)
+    {
+        outputFile << elem.first;
+
+        std::cout << "Starting serial test.\n";
+        double res_serial = 0.0;
+        for (int i = 0; i < 10; i++)
+        {
+            res_serial += run_test(integration_serial, elem.second, 0, 1000, 0);
+        }
+        res_serial /= 10;
+        std::cout << "Serial test finished.\n";
+
+        double res = 0.0;
+        for (int threads : threads_list)
+        {
+            std::cout << "Starting parallel test (" << threads << ").\n";
+            for (int i = 0; i < 10; i++)
+            {
+                res += run_test(integration_parallel, elem.second, 0, 1000, threads);
+            }
+            res /= 10;
+            std::cout << res_serial << " " << res << " " << res_serial / res << "\n";
+            outputFile << " " << res << "," << res_serial / res;
+            res = 0.0;
+        }
+        std::cout << "Parallel test finished.\n";
+
+        outputFile << "\n";
+    }
+
     outputFile.close();
-
     return 0;
 }
 
-void run_test(myfunc *func, double a, double b, std::ofstream &out)
+double run_test(double (*integration)(func, int, int, int), func f, int a, int b, int NumThreads)
 {
-    int serial_time = run_serial(func, a, b);
-    std::vector<int> parallel_time = run_parallel(func, a, b);
-    
-    for (int i = 0; i < parallel_time.size(); i++)
-    {
-        out << " " << parallel_time[i];
-    }
-    out << "\n";
-    for (int i = 0; i < parallel_time.size(); i++)
-    {
-        out << " " << (double)serial_time / parallel_time[i];
-    }
-    out << "\n";
+    const auto start{std::chrono::steady_clock::now()};
+    integration(f, a, b, NumThreads);
+    const auto end{std::chrono::steady_clock::now()};
+    const std::chrono::duration<double> time_elapsed(end - start);
+
+    return time_elapsed.count();
 }
 
-int run_serial(myfunc *func, double a, double b)
-{
-    auto start = std::chrono::high_resolution_clock::now();
-    integration_serial(func, a, b);
-    auto end = std::chrono::high_resolution_clock::now();
-
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    return duration.count();
-}
-
-std::vector<int> run_parallel(myfunc *func, double a, double b)
-{
-    std::vector<int> idx{1, 2, 4, 7, 8, 16, 20, 40};
-    std::vector<int> result;
-    for (int i = 0; i < idx.size(); i++)
-    {
-        auto start = std::chrono::high_resolution_clock::now();
-        integration_parallel(func, a, b, idx[i]);
-        auto end = std::chrono::high_resolution_clock::now();
-
-        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        result.push_back(duration.count());
-    }
-    return result;
-}
-
-double integration_serial(myfunc *func, double a, double b)
+double integration_serial(func f, int a, int b, int _)
 {
     double step = (double)(b - a) / NSTEPS;
 
@@ -80,13 +82,13 @@ double integration_serial(myfunc *func, double a, double b)
     for (int i = 0; i < NSTEPS; i++)
     {
         double x = a + (i + 0.5) * step;
-        sum += func(x) * step;
+        sum += f(x) * step;
     }
     
     return sum;
 }
 
-double integration_parallel(myfunc *func, double a, double b, int NumThreads)
+double integration_parallel(func f, int a, int b, int NumThreads)
 {
     double step = (double)(b - a) / NSTEPS;
 
@@ -101,7 +103,7 @@ double integration_parallel(myfunc *func, double a, double b, int NumThreads)
         for (int i = current_thread_number; i < NSTEPS; i += threads_count)
         {
             double x = a + (i + 0.5) * step;
-            local_sum += func(x) * step;
+            local_sum += f(x) * step;
         }
         #pragma omp atomic
         sum += local_sum;

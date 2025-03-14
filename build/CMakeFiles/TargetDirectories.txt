@@ -1,5 +1,0 @@
-/home/d.karpachev/cpp_projects/build/CMakeFiles/integration.dir
-/home/d.karpachev/cpp_projects/build/CMakeFiles/matrix.dir
-/home/d.karpachev/cpp_projects/build/CMakeFiles/sole_for.dir
-/home/d.karpachev/cpp_projects/build/CMakeFiles/edit_cache.dir
-/home/d.karpachev/cpp_projects/build/CMakeFiles/rebuild_cache.dir

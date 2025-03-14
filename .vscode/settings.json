@@ -6,5 +6,8 @@
         "statusBar.background": "#262626",
         "statusBar.foreground": "#e9dbb7"
     },
-    "cmake.sourceDirectory": "/home/d.karpachev/cpp_projects/task2"
+    "cmake.sourceDirectory": "/home/d.karpachev/cpp_projects/task2",
+    "files.associations": {
+        "chrono": "cpp"
+    }
 }

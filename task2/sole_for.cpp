@@ -4,164 +4,111 @@
 #include <cmath>
 #include <chrono>
 #include <fstream>
+#include <memory>
 
-#define N 10000
+#define tau 0.01
+#define epsilon 0.00001
+#define N 1000
 
-using matrix = std::vector<double>;
+using int_vec = std::vector<int>;
+using vec = std::unique_ptr<double[]>;
 
-void init(matrix &A, matrix &b, matrix &x_0, matrix &x);
-void init_parallel(matrix &A, matrix &b, matrix &x_0, matrix &x, int NumThreads);
+void generate_serial(vec &A, vec &b, vec &x, vec &x_0, int _);
+void generate_parallel_threads(vec &A, vec &b, vec &x, vec &x_0, int NumThreads);
+void generate_parallel_for(vec &A, vec &b, vec &x, vec &x_0, int _);
 
-double length(const matrix &vec);
-double dot_length(const matrix &A, const matrix &x, const matrix &b);
-void iter_func_parallel_for(const matrix &A, const matrix &b, const matrix &x_0, double lr, matrix &x);
-void iter_func_parallel(const matrix &A, const matrix &b, const matrix &x_0, double lr, matrix &x, int NumThreads);
-void iter_func_serial(const matrix &A, const matrix &b, const matrix &x_0, double lr, matrix &x);
+void step_serial(const vec &A, const vec &b, vec &x_0, vec &x, int _);
+void step_parallel_threads(const vec &A, const vec &b, vec &x_0, vec &x, int NumThreads);
+void step_parallel_for(const vec &A, const vec &b, vec &x_0, vec &x, int _);
 
 int main()
 {
-
-    matrix A(N * N);
-    matrix b(N);
-
-    matrix x_0(N);
-    matrix x(N);
-    double tau = 0.01;
-    double epsilon = 0.00001;
+    std::ofstream outputFile("data/sole_result.txt");
     
-    init(A, b, x_0, x);
-
-    std::ofstream outputFile("sole_error.txt");
-    
-    double err = 1.0;
-    double last_err = 1.0;
-    int i = 0;
-    int last_i = 0;
-    int step = 100;
-    while (err >= epsilon)
-    {
-        iter_func_parallel_for(A, b, x_0, tau, x);
-        err = dot_length(A, x, b) / length(b);
-        i++;
-        if (i - last_i >= step && last_err <= err) break;
-        else if (i - last_i >= step)
-        {
-            last_err = err;
-            last_i = i;
-        }
-        std::cout << i << ": " << err << "\n";
-    }
-    
-    for (int i = 0; i < N; i++)
-    {
-        std::cout << x[i] << "\n";
-    }
     
     outputFile.close();
 
     return 0;
 }
 
-void init(matrix &A, matrix &b, matrix &x_0, matrix &x)
+void generate_serial(vec &A, vec &b, vec &x, vec &x_0, int _)
 {
     for (int i = 0; i < N; i++)
     {
-        x_0[i] = 0.0;
-        x[i] = 0.0;
+        b[i] = static_cast<double>(N);
         for (int j = 0; j < N; j++)
         {
-            A[i * N + j] = (i == j) ? 2 : 1;
+            A[i * N + j] = static_cast<double>((i == j) ? 2 : 1);
         }
     }
-    
     for (int i = 0; i < N; i++)
     {
-        b[i] = N + 1;
+        x[i] = static_cast<double>(0.0);
+        x_0[i] = static_cast<double>(0.0);
     }
 }
 
-void init_parallel(matrix &A, matrix &b, matrix &x_0, matrix &x, int NumThreads)
+void generate_parallel_threads(vec &A, vec &b, vec &x, vec &x_0, int NumThreads)
 {
-    for (int i = 0; i < N; i++)
+#pragma omp parallel num_threads(NumThreads)
     {
-        x_0[i] = 0.0;
-        x[i] = 0.0;
-        for (int j = 0; j < N; j++)
+        int current_thread_number = omp_get_thread_num();
+        int threads_count = omp_get_num_threads();
+
+        int items_per_thread = N / threads_count;
+        int lower_bound = current_thread_number * items_per_thread;
+        int upper_bound = (current_thread_number == threads_count - 1) ? (N - 1) : (lower_bound + items_per_thread - 1);
+
+        for (int i = lower_bound; i <= upper_bound; i++)
         {
-            A[i * N + j] = (i == j) ? 2 : 1;
+            b[i] = static_cast<double>(N);
+            for (int j = 0; j < N; j++)
+            {
+                A[i * N + j] = static_cast<double>((i == j) ? 2 : 1);
+            }
         }
     }
-    
     for (int i = 0; i < N; i++)
     {
-        b[i] = N + 1;
+        x[i] = static_cast<double>(0.0);
+        x_0[i] = static_cast<double>(0.0);
     }
 }
 
-double length(const matrix &vec)
-{
-    double sum = 0.0;
-    for (int i = 0; i < N; i++)
-    {
-        sum += vec[i] * vec[i];
-    }
-    sum = std::sqrt(sum);
-    return sum;
-}
-
-double dot_length(const matrix &A, const matrix &x, const matrix &b)
-{
-    double res = 0.0;
-    for (int i = 0; i < N; i++)
-    {
-        double sum = 0.0;
-        for (int j = 0; j < N; j++)
-        {
-            sum += A[i * N + j] * x[j];             
-        }
-        sum -= b[i];
-        res += sum * sum;
-    }
-    res = std::sqrt(res);
-    return res;
-}
-
-void iter_func_parallel_for(const matrix &A, const matrix &b, const matrix &x_0, double lr, matrix &x)
+void generate_parallel_for(vec &A, vec &b, vec &x, vec &x_0, int _)
 {
     #pragma omp for
     for (int i = 0; i < N; i++)
     {
-        double sum = 0.0;
+        b[i] = static_cast<double>(N);
         for (int j = 0; j < N; j++)
         {
-            sum += A[i * N + j] * x_0[j];             
+            A[i * N + j] = static_cast<double>((i == j) ? 2 : 1);
         }
-        x[i] = x_0[i] - lr * (sum - b[i]);
+    }
+
+    for (int i = 0; i < N; i++)
+    {
+        x[i] = static_cast<double>(0.0);
+        x_0[i] = static_cast<double>(0.0);
     }
 }
 
-void iter_func_parallel(const matrix &A, const matrix &b, const matrix &x_0, double lr, matrix &x, int NumThreads)
+void step_serial(const vec &A, const vec &b, const vec &x_0, vec &x, int _)
 {
     for (int i = 0; i < N; i++)
     {
-        double sum = 0.0;
         for (int j = 0; j < N; j++)
         {
-            sum += A[i * N + j] * x_0[j];             
+            x[i] = x_0[i] - tau * (A[i * N + j] * x_0[j] - b[j]);
         }
-        x[i] = x_0[i] - lr * (sum - b[i]);
     }
 }
 
-void iter_func_serial(const matrix &A, const matrix &b, const matrix &x_0, double lr, matrix &x)
+void step_parallel_threads(const vec &A, const vec &b, vec &x_0, vec &x, int NumThreads)
 {
-    for (int i = 0; i < N; i++)
-    {
-        double sum = 0.0;
-        for (int j = 0; j < N; j++)
-        {
-            sum += A[i * N + j] * x_0[j]; 
-        }
-        x[i] = x_0[i] - lr * (sum - b[i]);
-    }
+}
+
+void step_parallel_for(const vec &A, const vec &b, vec &x_0, vec &x, int _)
+{
 }

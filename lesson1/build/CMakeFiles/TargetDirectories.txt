@@ -1,3 +1,0 @@
-/home/dmitry/.sshfs/parallel/cpp_projects/lesson1/build/CMakeFiles/main.dir
-/home/dmitry/.sshfs/parallel/cpp_projects/lesson1/build/CMakeFiles/edit_cache.dir
-/home/dmitry/.sshfs/parallel/cpp_projects/lesson1/build/CMakeFiles/rebuild_cache.dir
