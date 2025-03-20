@@ -19,7 +19,7 @@ void parallel_mul(const vec &A, const vec &b, vec &c, int m, int n, int NumThrea
 
 int main()
 {
-    std::ofstream outputFile("data/matrix_result.txt");
+    std::ofstream outputFile("data/matrix_result1.txt");
 
     int_vec sizes{20000, 40000};
     int_vec threads_list{1, 2, 4, 7, 8, 16, 20, 40};

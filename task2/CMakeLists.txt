@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.10)
 project(Task2 LANGUAGES CXX)
 
+add_library(for STATIC "lib/for.cpp" "lib/for.hpp")
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_COMPILER g++)
 
@@ -21,4 +23,5 @@ foreach(SRC ${SOURCES})
     set_target_properties(${EXE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
     target_compile_features(${EXE_NAME} PRIVATE cxx_std_17)
     target_link_libraries(${EXE_NAME} PRIVATE Threads::Threads)
+    target_link_libraries(${EXE_NAME} PRIVATE for)
 endforeach()
