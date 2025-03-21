@@ -15,7 +15,6 @@ data = {}
 with open(data_path, "r") as file:
    lines = [line[:-2].split(" ") for line in file.readlines()]
    X = list(map(int, lines[0]))
-   print(X)
    for line in lines[1:]:
       data[line[0]] = [[], []]
       for elem in line[1:]:

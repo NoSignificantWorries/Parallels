@@ -8,9 +8,9 @@
 
 #include "lib/for.hpp"
 
-#define N 4000
+#define N 1900
 #define ITER 10
-#define TAU 0.01
+#define TAU 0.001
 #define EPSILON 0.00001
 
 using int_vec = std::vector<int>;
@@ -39,41 +39,40 @@ int main()
     double res_serial = 0.0;
     for (int i = 0; i < ITER; i++) res_serial += run(generate_serial, step_serial, TAU, N, 0);
     res_serial /= ITER;
-    std::cout << "Serial finished.\n";
+
+    int chunk = 300;
 
     std::cout << "Start for auto...\n";
     double res_for_auto = 0.0;
-    for (int i = 0; i < ITER; i++) res_for_auto += run(generate_parallel_auto, step_parallel_for_auto, TAU, N, 0);
+    for (int i = 0; i < ITER; i++) res_for_auto += run(generate_serial, step_parallel_for_auto, TAU, N, 0);
     res_for_auto /= ITER;
-    std::cout << "Auto finished.\n";
-    
-    std::cout << "Start for static...";
+
     double res_for_static = 0.0;
-    for (int i = 0; i < ITER; i++) res_for_static += run(generate_parallel_static, step_parallel_for_static, TAU, N, 0);
+    std::cout << "Start for static...\n";
+    for (int i = 0; i < ITER; i++) res_for_static += run(generate_serial, step_parallel_for_static, TAU, N, 0);
     res_for_static /= ITER;
-    std::cout << "Static finished.\n";
-    
-    std::cout << "Start for guided...\n";
+
+    double res_dynamic = 0.0;
+    std::cout << "Start dynamic...\n";
+    for (int i = 0; i < ITER; i++) res_dynamic += run(generate_serial, step_parallel_for_dynamic, TAU, N, chunk);
+    res_dynamic /= ITER;
+
     double res_for_guided = 0.0;
-    for (int i = 0; i < ITER; i++) res_for_guided += run(generate_parallel_guided, step_parallel_for_guided, TAU, N, 0);
+    std::cout << "Start for guided...\n";
+    for (int i = 0; i < ITER; i++) res_for_guided += run(generate_serial, step_parallel_for_guided, TAU, N, chunk);
     res_for_guided /= ITER;
-    std::cout << "Guided finished.\n";
 
     double res_threads = 0.0;
     double_vec results_threads(threads_list.size());
-    double res_dynamic = 0.0;
-    double_vec results_dynamic(threads_list.size());
     for (int j = 0; j < threads_list.size(); j++)
     {
         std::cout << "Start threads (" << threads_list[j] << ")...\n";
-        for (int i = 0; i < ITER; i++) res_threads += run(generate_parallel_threads, step_parallel_threads, TAU, N, threads_list[j]);
+        for (int i = 0; i < ITER; i++) 
+        {
+            res_threads += run(generate_parallel_threads, step_parallel_threads, TAU, N, threads_list[j]);
+        }
         results_threads[j] = res_threads / ITER;
         res_threads = 0.0;
-
-        std::cout << "Start dynamic (" << threads_list[j] << ")...\n";
-        for (int i = 0; i < ITER; i++) res_dynamic += run(generate_parallel_dynamic, step_parallel_for_dynamic, TAU, N, N / threads_list[j]);
-        results_dynamic[j] = res_dynamic / ITER;
-        res_dynamic = 0.0;
     }
     for (int threads: threads_list) outputFile << threads << " ";
     outputFile << "\n";
@@ -81,6 +80,7 @@ int main()
     outputFile << "For_Auto";
     for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_for_auto << "," << res_serial / res_for_auto;
     outputFile << "\n";
+
 
     outputFile << "For_Guided";
     for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_for_guided << "," << res_serial / res_for_guided;
@@ -90,9 +90,8 @@ int main()
     for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_for_static << "," << res_serial / res_for_static;
     outputFile << "\n";
 
-
     outputFile << "For_Dynamic";
-    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << results_dynamic[i] << "," << res_serial / results_dynamic[i];
+    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_dynamic << "," << res_serial / res_dynamic;
     outputFile << "\n";
 
     outputFile << "Threads";
