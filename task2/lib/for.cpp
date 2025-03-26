@@ -3,56 +3,68 @@
 
 void step_parallel_for_auto(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int _)
 {
-    #pragma omp for schedule(auto)
-    for (int i = 0; i < n; i++)
+#pragma omp parallel
     {
-        double tmp = 0.0;
-        for (int j = 0; j < n; j++)
+#pragma omp for schedule(auto)
+        for (int i = 0; i < n; i++)
         {
-            tmp += A[i * n + j] * x_0[j];
+            double tmp = 0.0;
+            for (int j = 0; j < n; j++)
+            {
+                tmp += A[i * n + j] * x_0[j];
+            }
+            x[i] = x_0[i] - tau * (tmp - b[i]);
         }
-        x[i] = x_0[i] - tau * (tmp - b[i]);
     }
 }
 
-void step_parallel_for_static(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int ChunkSize)
+void step_parallel_for_static(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int _)
 {
-    #pragma omp for schedule(static)
-    for (int i = 0; i < n; i++)
+#pragma omp parallel
     {
-        double tmp = 0.0;
-        for (int j = 0; j < n; j++)
+#pragma omp for schedule(static)
+        for (int i = 0; i < n; i++)
         {
-            tmp += A[i * n + j] * x_0[j];
+            double tmp = 0.0;
+            for (int j = 0; j < n; j++)
+            {
+                tmp += A[i * n + j] * x_0[j];
+            }
+            x[i] = x_0[i] - tau * (tmp - b[i]);
         }
-        x[i] = x_0[i] - tau * (tmp - b[i]);
     }
 }
 
 void step_parallel_for_dynamic(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int ChunkSize)
 {
-    #pragma omp for schedule(dynamic, ChunkSize)
-    for (int i = 0; i < n; i++)
+#pragma omp parallel
     {
-        double tmp = 0.0;
-        for (int j = 0; j < n; j++)
+#pragma omp for schedule(dynamic, ChunkSize)
+        for (int i = 0; i < n; i++)
         {
-            tmp += A[i * n + j] * x_0[j];
+            double tmp = 0.0;
+            for (int j = 0; j < n; j++)
+            {
+                tmp += A[i * n + j] * x_0[j];
+            }
+            x[i] = x_0[i] - tau * (tmp - b[i]);
         }
-        x[i] = x_0[i] - tau * (tmp - b[i]);
     }
 }
 
 void step_parallel_for_guided(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int ChunkSize)
 {
-    #pragma omp for schedule(guided, ChunkSize)
-    for (int i = 0; i < n; i++)
+#pragma omp parallel
     {
-        double tmp = 0.0;
-        for (int j = 0; j < n; j++)
+#pragma omp for schedule(guided, ChunkSize)
+        for (int i = 0; i < n; i++)
         {
-            tmp += A[i * n + j] * x_0[j];
+            double tmp = 0.0;
+            for (int j = 0; j < n; j++)
+            {
+                tmp += A[i * n + j] * x_0[j];
+            }
+            x[i] = x_0[i] - tau * (tmp - b[i]);
         }
-        x[i] = x_0[i] - tau * (tmp - b[i]);
     }
 }

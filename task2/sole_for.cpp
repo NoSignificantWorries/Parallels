@@ -40,7 +40,7 @@ int main()
     for (int i = 0; i < ITER; i++) res_serial += run(generate_serial, step_serial, TAU, N, 0);
     res_serial /= ITER;
 
-    int chunk = 300;
+    int chunk = 10;
 
     std::cout << "Start for auto...\n";
     double res_for_auto = 0.0;
@@ -124,7 +124,7 @@ double run(void (*generate)(vec &, vec &, vec &, vec &, int, int),
         if (i % 2 == 0) 
         {
             const auto start{std::chrono::steady_clock::now()};
-            step(A, b, x_0, x, tau, n, 0);
+            step(A, b, x_0, x, tau, n, NumThreads);
             const auto end{std::chrono::steady_clock::now()};
             const std::chrono::duration<double> time_elapsed(end - start);
             time += time_elapsed.count();
@@ -133,7 +133,7 @@ double run(void (*generate)(vec &, vec &, vec &, vec &, int, int),
         else
         {
             const auto start{std::chrono::steady_clock::now()};
-            step(A, b, x, x_0, tau, n, 0);
+            step(A, b, x, x_0, tau, n, NumThreads);
             const auto end{std::chrono::steady_clock::now()};
             const std::chrono::duration<double> time_elapsed(end - start);
             time += time_elapsed.count();
