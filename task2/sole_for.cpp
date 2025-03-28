@@ -40,58 +40,77 @@ int main()
     for (int i = 0; i < ITER; i++) res_serial += run(generate_serial, step_serial, TAU, N, 0);
     res_serial /= ITER;
 
-    int chunk = 10;
-
-    std::cout << "Start for auto...\n";
-    double res_for_auto = 0.0;
-    for (int i = 0; i < ITER; i++) res_for_auto += run(generate_serial, step_parallel_for_auto, TAU, N, 0);
-    res_for_auto /= ITER;
-
-    double res_for_static = 0.0;
-    std::cout << "Start for static...\n";
-    for (int i = 0; i < ITER; i++) res_for_static += run(generate_serial, step_parallel_for_static, TAU, N, 0);
-    res_for_static /= ITER;
-
-    double res_dynamic = 0.0;
-    std::cout << "Start dynamic...\n";
-    for (int i = 0; i < ITER; i++) res_dynamic += run(generate_serial, step_parallel_for_dynamic, TAU, N, chunk);
-    res_dynamic /= ITER;
-
-    double res_for_guided = 0.0;
-    std::cout << "Start for guided...\n";
-    for (int i = 0; i < ITER; i++) res_for_guided += run(generate_serial, step_parallel_for_guided, TAU, N, chunk);
-    res_for_guided /= ITER;
 
     double res_threads = 0.0;
+    double res_for_auto = 0.0;
+    double res_for_static = 0.0;
+    double res_dynamic = 0.0;
+    double res_for_guided = 0.0;
     double_vec results_threads(threads_list.size());
+    double_vec results_auto(threads_list.size());
+    double_vec results_static(threads_list.size());
+    double_vec results_dynamic(threads_list.size());
+    double_vec results_guided(threads_list.size());
     for (int j = 0; j < threads_list.size(); j++)
     {
-        std::cout << "Start threads (" << threads_list[j] << ")...\n";
-        for (int i = 0; i < ITER; i++) 
+        std::cout << "Threads: (" << threads_list[j] << ")\n";
+        std::cout << "Start threads...\n";
+        for (int i = 0; i < ITER; i++)
         {
             res_threads += run(generate_parallel_threads, step_parallel_threads, TAU, N, threads_list[j]);
         }
         results_threads[j] = res_threads / ITER;
         res_threads = 0.0;
+
+        std::cout << "Start for auto...\n";
+        for (int i = 0; i < ITER; i++)
+        {
+            res_for_auto += run(generate_serial, step_parallel_for_auto, TAU, N, threads_list[j]);
+        }
+        results_auto[j] = res_for_auto / ITER;
+        res_for_auto = 0.0;
+
+        std::cout << "Start for static...\n";
+        for (int i = 0; i < ITER; i++)
+        {
+            res_for_static += run(generate_serial, step_parallel_for_static, TAU, N, threads_list[j]);
+        }
+        results_static[j] = res_for_static / ITER;
+        res_for_static = 0.0;
+
+        std::cout << "Start dynamic...\n";
+        for (int i = 0; i < ITER; i++)
+        {
+            res_dynamic += run(generate_serial, step_parallel_for_dynamic, TAU, N, threads_list[j]);
+        }
+        results_dynamic[j] = res_dynamic / ITER;
+        res_dynamic = 0.0;
+
+        std::cout << "Start for guided...\n";
+        for (int i = 0; i < ITER; i++)
+        {
+            res_for_guided += run(generate_serial, step_parallel_for_guided, TAU, N, threads_list[j]);
+        }
+        results_guided[j] = res_for_guided / ITER;
+        res_for_guided = 0.0;
     }
     for (int threads: threads_list) outputFile << threads << " ";
     outputFile << "\n";
 
     outputFile << "For_Auto";
-    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_for_auto << "," << res_serial / res_for_auto;
+    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << results_auto[i] << "," << res_serial / results_auto[i];
     outputFile << "\n";
 
-
     outputFile << "For_Guided";
-    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_for_guided << "," << res_serial / res_for_guided;
+    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << results_guided[i] << "," << res_serial / results_guided[i];
     outputFile << "\n";
 
     outputFile << "For_Static";
-    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_for_static << "," << res_serial / res_for_static;
+    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << results_static[i] << "," << res_serial / results_static[i];
     outputFile << "\n";
 
     outputFile << "For_Dynamic";
-    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << res_dynamic << "," << res_serial / res_dynamic;
+    for (int i = 0; i < threads_list.size(); i++) outputFile << " " << results_dynamic[i] << "," << res_serial / results_dynamic[i];
     outputFile << "\n";
 
     outputFile << "Threads";

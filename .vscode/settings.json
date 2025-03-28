@@ -6,8 +6,5 @@
         "statusBar.background": "#262626",
         "statusBar.foreground": "#e9dbb7"
     },
-    "cmake.sourceDirectory": "/home/d.karpachev/cpp_projects/task2",
-    "files.associations": {
-        "chrono": "cpp"
-    }
+    "C_Cpp.default.compilerPath": "/usr/bin/g++-13"
 }

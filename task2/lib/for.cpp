@@ -1,9 +1,9 @@
 #include "for.hpp"
 #include <omp.h>
 
-void step_parallel_for_auto(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int _)
+void step_parallel_for_auto(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int NumThreads)
 {
-#pragma omp parallel
+#pragma omp parallel num_threads(NumThreads)
     {
 #pragma omp for schedule(auto)
         for (int i = 0; i < n; i++)
@@ -18,9 +18,9 @@ void step_parallel_for_auto(const vec &A, const vec &b, const vec &x_0, vec &x, 
     }
 }
 
-void step_parallel_for_static(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int _)
+void step_parallel_for_static(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int NumThreads)
 {
-#pragma omp parallel
+#pragma omp parallel num_threads(NumThreads)
     {
 #pragma omp for schedule(static)
         for (int i = 0; i < n; i++)
@@ -35,11 +35,11 @@ void step_parallel_for_static(const vec &A, const vec &b, const vec &x_0, vec &x
     }
 }
 
-void step_parallel_for_dynamic(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int ChunkSize)
+void step_parallel_for_dynamic(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int NumThreads)
 {
-#pragma omp parallel
+#pragma omp parallel num_threads(NumThreads)
     {
-#pragma omp for schedule(dynamic, ChunkSize)
+#pragma omp for schedule(dynamic, Chunk)
         for (int i = 0; i < n; i++)
         {
             double tmp = 0.0;
@@ -52,11 +52,11 @@ void step_parallel_for_dynamic(const vec &A, const vec &b, const vec &x_0, vec &
     }
 }
 
-void step_parallel_for_guided(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int ChunkSize)
+void step_parallel_for_guided(const vec &A, const vec &b, const vec &x_0, vec &x, double tau, int n, int NumThreads)
 {
-#pragma omp parallel
+#pragma omp parallel num_threads(NumThreads)
     {
-#pragma omp for schedule(guided, ChunkSize)
+#pragma omp for schedule(guided, Chunk)
         for (int i = 0; i < n; i++)
         {
             double tmp = 0.0;
