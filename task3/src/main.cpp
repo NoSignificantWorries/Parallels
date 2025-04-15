@@ -11,7 +11,7 @@
 #include <random>
 #include <fstream>
 
-#define N 100
+#define N 10000
 
 template <typename T>
 class Thread {
@@ -21,29 +21,34 @@ private:
     std::unordered_map<size_t, T> results;
     std::atomic<bool> stop_thread;
     std::thread thread;
+    std::condition_variable new_task;
+    std::condition_variable ready_to_new_task;
     size_t next_id;
 
-    void run(std::atomic<bool> &stop_tocken)
+    void run()
     {
-        std::unique_lock lock_res = {this->mux, std::defer_lock};
-        size_t id_task;
-
         std::cout << "Started.\n";
-
-        while (!stop_tocken.load())
+        while (!this->stop_thread.load())
         {
-            lock_res.lock();
-            if (!this->tasks.empty())
             {
-                id_task = this->tasks.front().first;
-                this->results.insert({id_task, this->tasks.front().second.get()});
-                this->tasks.pop();
+                std::unique_lock<std::mutex> lock(this->mux);
+
+                this->new_task.wait(lock, [this]
+                                    { return !this->tasks.empty() || this->stop_thread.load(); });
+                
+                if (this->tasks.empty() && this->stop_thread.load())
+                {
+                    break;
+                }
+                
+                if (!this->tasks.empty())
+                {
+                    auto task = std::move(this->tasks.front());
+                    this->tasks.pop();
+                    this->results[task.first] = task.second.get();
+                }
             }
-            lock_res.unlock();
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
         }
-
         std::cout << "Stoped.\n";
     }
 
@@ -60,12 +65,13 @@ public:
     
     void start()
     {
-        this->thread = std::thread(&Thread::run, this, std::ref(this->stop_thread));
+        this->thread = std::thread(&Thread::run, this);
     }
 
     void stop()
     {
         this->stop_thread.store(true);
+        new_task.notify_all();
         if (this->thread.joinable())
         {
             this->thread.join();
@@ -75,38 +81,29 @@ public:
     template<typename Func, typename... Args>
     size_t add_task(Func func, Args&&... args)
     {
+        this->ready_to_new_task.wait();
+
         size_t task_id = this->next_id++;
-        std::future<T> result = std::async(std::launch::async,
-                                            [func, args...]()
-                                            {
-                                                return func(args...);
-                                            });
+        std::future<T> result = std::async(std::launch::async, func, std::forward<Args>(args)...);
         {
             std::lock_guard<std::mutex> lock(this->mux);
             this->tasks.push({ task_id, std::move(result) });
         }
+        this->new_task.notify_one();
         return task_id;
     }
 
     T request_result(size_t id_res)
     {
-        std::unique_lock lock_res = {this->mux, std::defer_lock};
-
-        bool ready_result = false;
-        T res;
-        while (!ready_result)
-        {
-            lock_res.lock();
-            if (this->results.find(id_res) != this->results.end())
-            {
-                res = this->results[id_res];
-                this->results.erase(id_res);
-                ready_result = true;
-            }
-            lock_res.unlock();
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        std::unique_lock<std::mutex> lock(this->mux);
+        this->new_task.wait(lock, [this, id_res] { return this->results.find(id_res) != this->results.end() || this->stop_thread.load(); });
+        
+        if (this->results.find(id_res) == this->results.end()) {
+            throw std::runtime_error("Result not available");
         }
+
+        T res = this->results[id_res];
+        this->results.erase(id_res);
         return res;
     }
 };
@@ -150,11 +147,13 @@ void client_sin(Thread<T> &thread)
         arg = dis(gen);
         task_id = thread.add_task(sin_func, arg);
         ids.push_back({i, task_id, arg});
+        std::cout << "added sin: " << i << "\n";
     }
 
     file << "Task number | id | input | output\n";
     T res = 0.0;
     for (size_t i = 0; i < N; i++) {
+        std::cout << "weiting sin " << i << "...\n";
         res = thread.request_result(std::get<1>(ids[i]));
         file << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " " << std::get<2>(ids[i]) << " " << res << "\n";
     }
@@ -190,11 +189,13 @@ void client_sqrt(Thread<T> &thread)
         arg = dis(gen);
         task_id = thread.add_task(sin_func, arg);
         ids.push_back({i, task_id, arg});
+        std::cout << "added sqrt: " << i << "\n";
     }
 
     (*file_ptr) << "Task number | id | input | output\n";
     T res = 0.0;
     for (size_t i = 0; i < N; i++) {
+        std::cout << "weiting sqrt " << i << "...\n";
         res = thread.request_result(std::get<1>(ids[i]));
         (*file_ptr) << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " " << std::get<2>(ids[i]) << " " << res << "\n";
     }
@@ -229,11 +230,13 @@ void client_pow(Thread<T> &thread)
         arg2 = dis_b(gen);
         task_id = thread.add_task(sin_func, arg1, arg2);
         ids.push_back({i, task_id, arg1, arg2});
+        std::cout << "added pow: " << i << "\n";
     }
 
     file << "Task number | id | input | output\n";
     T res = 0.0;
     for (size_t i = 0; i < N; i++) {
+        std::cout << "weiting pow " << i << "...\n";
         res = thread.request_result(std::get<1>(ids[i]));
         file << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " (" << std::get<2>(ids[i]) << " " << std::get<3>(ids[i]) << ") " << res << "\n";
     }
