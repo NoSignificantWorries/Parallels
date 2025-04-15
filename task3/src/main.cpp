@@ -16,37 +16,38 @@
 template <typename T>
 class Thread {
 private:
-    std::queue<std::pair<size_t, std::future<T>>> tasks;
-    std::mutex mux;
-    std::unordered_map<size_t, T> results;
-    std::atomic<bool> stop_thread;
     std::thread thread;
-    std::condition_variable new_task;
-    std::condition_variable ready_to_new_task;
+    std::queue<std::pair<size_t, std::future<T>>> tasks;
+    std::unordered_map<size_t, T> results;
+    std::mutex queue_mutex;
+    std::mutex results_mutex;
+    std::atomic<bool> running;
+    std::condition_variable task_waiter;
     size_t next_id;
 
     void run()
     {
         std::cout << "Started.\n";
-        while (!this->stop_thread.load())
+        while (this->running.load())
         {
-            {
-                std::unique_lock<std::mutex> lock(this->mux);
+            std::unique_lock<std::mutex> lock(this->queue_mutex);
 
-                this->new_task.wait(lock, [this]
-                                    { return !this->tasks.empty() || this->stop_thread.load(); });
-                
-                if (this->tasks.empty() && this->stop_thread.load())
-                {
-                    break;
-                }
-                
-                if (!this->tasks.empty())
-                {
-                    auto task = std::move(this->tasks.front());
-                    this->tasks.pop();
-                    this->results[task.first] = task.second.get();
-                }
+            this->task_waiter.wait(lock, [this] { return !this->tasks.empty() || !this->running.load(); });
+            
+            if (!this->running.load()) break;
+
+            auto task = std::move(this->tasks.front());
+            this->tasks.pop();
+            lock.unlock();
+            
+            size_t task_id = task.first;
+            std::future<T> future = std::move(task.second);
+            
+            {
+                T result = future.get();
+
+                std::lock_guard<std::mutex> lock_results(this->results_mutex);
+                this->results[task_id] = result;
             }
         }
         std::cout << "Stoped.\n";
@@ -55,7 +56,7 @@ private:
 public:
     Thread()
     {
-        this->stop_thread.store(false);
+        this->running.store(false);
         this->next_id = 0;
     }
     ~Thread()
@@ -65,46 +66,53 @@ public:
     
     void start()
     {
-        this->thread = std::thread(&Thread::run, this);
+        if (!this->running.load())
+        {
+            this->running.store(true);
+            this->thread = std::thread(&Thread::run, this);
+        }
     }
 
     void stop()
     {
-        this->stop_thread.store(true);
-        new_task.notify_all();
-        if (this->thread.joinable())
+        if (this->running.load())
         {
-            this->thread.join();
+            this->running.store(false);
+            this->task_waiter.notify_all();
+            if (this->thread.joinable())
+            {
+                this->thread.join();
+            }
         }
     }
-    
-    template<typename Func, typename... Args>
-    size_t add_task(Func func, Args&&... args)
-    {
-        this->ready_to_new_task.wait();
 
-        size_t task_id = this->next_id++;
-        std::future<T> result = std::async(std::launch::async, func, std::forward<Args>(args)...);
-        {
-            std::lock_guard<std::mutex> lock(this->mux);
-            this->tasks.push({ task_id, std::move(result) });
-        }
-        this->new_task.notify_one();
+    template<typename Func, typename... Args>
+    size_t add_task(Func&& func, Args&&... args)
+    {
+        std::lock_guard<std::mutex> lock(this->queue_mutex);
+        size_t task_id = ++this->next_id;
+
+        std::future<T> future = std::async(std::launch::async, std::forward<Func>(func), std::forward<Args>(args)...);
+        this->tasks.push({ task_id, std::move(future) });
+        
+        this->task_waiter.notify_one();
+
         return task_id;
     }
 
     T request_result(size_t id_res)
     {
-        std::unique_lock<std::mutex> lock(this->mux);
-        this->new_task.wait(lock, [this, id_res] { return this->results.find(id_res) != this->results.end() || this->stop_thread.load(); });
-        
-        if (this->results.find(id_res) == this->results.end()) {
-            throw std::runtime_error("Result not available");
+        std::lock_guard<std::mutex> lock(this->results_mutex);
+        if (this->results.count(id_res) > 0)
+        {
+            T res = std::move(results[id_res]);
+            this->results.erase(id_res);
+            return res;
         }
-
-        T res = this->results[id_res];
-        this->results.erase(id_res);
-        return res;
+        else
+        {
+            throw std::runtime_error("Task not completed.");
+        }
     }
 };
 
@@ -127,7 +135,12 @@ T fun_pow(T x, T y)
 template<typename T>
 void client_sin(Thread<T> &thread)
 {
-    std::ofstream file("results/sin.txt");
+    auto file_deleter = [](std::fstream* fp) {
+        if (fp && fp->is_open()) fp->close();
+        delete fp;
+    };
+
+    std::shared_ptr<std::fstream> file_ptr(new std::fstream("results/sin.txt", std::ios::out), file_deleter);
     
     // start random
     std::random_device rd;
@@ -147,18 +160,28 @@ void client_sin(Thread<T> &thread)
         arg = dis(gen);
         task_id = thread.add_task(sin_func, arg);
         ids.push_back({i, task_id, arg});
-        std::cout << "added sin: " << i << "\n";
+        // std::cout << "added sin: " << i << "\n";
     }
 
-    file << "Task number | id | input | output\n";
+    (*file_ptr) << "Task number | id | input | output\n";
     T res = 0.0;
-    for (size_t i = 0; i < N; i++) {
-        std::cout << "weiting sin " << i << "...\n";
-        res = thread.request_result(std::get<1>(ids[i]));
-        file << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " " << std::get<2>(ids[i]) << " " << res << "\n";
+    size_t i = 0;
+    while (!ids.empty())
+    {
+        // std::cout << "weiting sin " << i << "...\n";
+        try
+        {
+            res = thread.request_result(std::get<1>(ids[i]));
+            (*file_ptr) << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " " << std::get<2>(ids[i]) << " " << res << "\n";
+            ids.erase(ids.begin() + i);
+            if (ids.size() <= 0) break;
+            i = (i + 1) % ids.size();
+        }
+        catch (const std::exception& error)
+        {
+            i = (i + 1) % ids.size();
+        }
     }
-    
-    file.close();
 }
 
 template<typename T>
@@ -189,28 +212,45 @@ void client_sqrt(Thread<T> &thread)
         arg = dis(gen);
         task_id = thread.add_task(sin_func, arg);
         ids.push_back({i, task_id, arg});
-        std::cout << "added sqrt: " << i << "\n";
+        // std::cout << "added sqrt: " << i << "\n";
     }
 
     (*file_ptr) << "Task number | id | input | output\n";
     T res = 0.0;
-    for (size_t i = 0; i < N; i++) {
-        std::cout << "weiting sqrt " << i << "...\n";
-        res = thread.request_result(std::get<1>(ids[i]));
-        (*file_ptr) << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " " << std::get<2>(ids[i]) << " " << res << "\n";
+    size_t i = 0;
+    while (!ids.empty())
+    {
+        // std::cout << "weiting sqrt " << i << "...\n";
+        try
+        {
+            res = thread.request_result(std::get<1>(ids[i]));
+            (*file_ptr) << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " " << std::get<2>(ids[i]) << " " << res << "\n";
+            ids.erase(ids.begin() + i);
+            if (ids.size() <= 0) break;
+            i = (i + 1) % ids.size();
+        }
+        catch (const std::exception& error)
+        {
+            i = (i + 1) % ids.size();
+        }
     }
 }
 
 template<typename T>
 void client_pow(Thread<T> &thread)
 {
-    std::ofstream file("results/pow.txt");
+    auto file_deleter = [](std::fstream* fp) {
+        if (fp && fp->is_open()) fp->close();
+        delete fp;
+    };
+
+    std::shared_ptr<std::fstream> file_ptr(new std::fstream("results/pow.txt", std::ios::out), file_deleter);
     
     // start random
     std::random_device rd;
     std::mt19937 gen(rd());
 
-    double min_a = 0.0;
+    double min_a = 1.0;
     double max_a = 10.0;
 
     double min_b = -2.0;
@@ -230,18 +270,28 @@ void client_pow(Thread<T> &thread)
         arg2 = dis_b(gen);
         task_id = thread.add_task(sin_func, arg1, arg2);
         ids.push_back({i, task_id, arg1, arg2});
-        std::cout << "added pow: " << i << "\n";
+        // std::cout << "added pow: " << i << "\n";
     }
 
-    file << "Task number | id | input | output\n";
+    (*file_ptr) << "Task number | id | input | output\n";
     T res = 0.0;
-    for (size_t i = 0; i < N; i++) {
-        std::cout << "weiting pow " << i << "...\n";
-        res = thread.request_result(std::get<1>(ids[i]));
-        file << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " (" << std::get<2>(ids[i]) << " " << std::get<3>(ids[i]) << ") " << res << "\n";
+    size_t i = 0;
+    while (!ids.empty())
+    {
+        // std::cout << "weiting pow " << i << "...\n";
+        try
+        {
+            res = thread.request_result(std::get<1>(ids[i]));
+            (*file_ptr) << std::get<0>(ids[i]) << " " << std::get<1>(ids[i]) << " (" << std::get<2>(ids[i]) << " " << std::get<3>(ids[i]) << ") " << res << "\n";
+            ids.erase(ids.begin() + i);
+            if (ids.size() <= 0) break;
+            i = (i + 1) % ids.size();
+        }
+        catch (const std::exception& error)
+        {
+            i = (i + 1) % ids.size();
+        }
     }
-    
-    file.close();
 }
 
 int main()
