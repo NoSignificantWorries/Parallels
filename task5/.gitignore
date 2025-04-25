@@ -1,0 +1,8 @@
+.vscode/
+__pycache__/
+.devcontainer/
+*.pt
+*.jpg
+.qodo/
+utils/
+log/
